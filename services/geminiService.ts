@@ -1,9 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { Attachment } from "../types";
 
-// Initialize Gemini Client
-// IMPORTANT: process.env.API_KEY is automatically injected by the environment.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize Gemini Client Lazily
+// This prevents the app from crashing immediately on load if process.env is undefined in some environments
+let ai: GoogleGenAI | null = null;
+
+const getAiClient = () => {
+  if (!ai) {
+    // IMPORTANT: process.env.API_KEY is automatically injected by the environment.
+    // We access it here to ensure the module can load even if the key is missing initially.
+    ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  }
+  return ai;
+};
 
 const MODEL_NAME = "gemini-3-flash-preview";
 
@@ -35,8 +44,11 @@ export const generateContentStream = async (
     // Add text prompt
     parts.push({ text: prompt });
 
+    // Get client instance
+    const client = getAiClient();
+
     // Use generateContentStream for fast response
-    const responseStream = await ai.models.generateContentStream({
+    const responseStream = await client.models.generateContentStream({
       model: MODEL_NAME,
       contents: {
         role: "user",
